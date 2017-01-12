@@ -182,10 +182,10 @@ class PhOnlineImportPlugin{
 		if($this->get_last_import_time() + 900 < time()){			
 			if(isset($_POST["ph_online_start_event_import"])){
 				
-				// Remove comment for debugging
-				$this->importer->import();
-				// Comment out for debugging
-		        // $this->schedule_import_now();		
+				// Remove comment for debugging in the next line
+				// $this->importer->import();
+				// Comment out next line for debugging
+		        $this->schedule_import_now();		
 				echo "<pre>Event-Import wurde gestartet. Ergebnisse gibt es in ungefähr 15 Minuten auf dieser Seite: <a href='".home_url("/wp-admin/tools.php?page=ph-online-import-log")."'>Status-Ansicht</a></pre>";
 				
 			}else{			
