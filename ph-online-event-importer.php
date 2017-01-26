@@ -268,7 +268,7 @@ class PhOnlineEventImporter{
 		$data["post_status"] = "publish";
 		$data["post_title"] = (string)$singleEvent->course->courseName->text;
 		$data["tax_input"] = array("tribe_events_cat" => $cats);		
-		$data["post_content"] = $post_content;
+		$data["post_content"] = nl2br($post_content);
 		$data["meta_input"]["course_order"] = (string)$singleEvent->course->courseCode;
 		$data["meta_input"]["course_id"] = (string)$singleEvent->course->courseID;
 		$data["meta_input"]["summary"] = (string)$event->summary;

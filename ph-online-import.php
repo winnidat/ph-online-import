@@ -26,7 +26,7 @@
 * @copyright  2016 Fabian Pimminger
 * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
 * @author     Fabian Pimminger @link http://fabianpimminger.com
-* @version    1.1
+* @version    1.2
 */
 
 require_once("ph-online-event-importer.php");
