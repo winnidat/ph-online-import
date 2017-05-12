@@ -243,12 +243,14 @@ class PhOnlineEventImporter{
 			
 		// Special Categories
 		
-		preg_match("/\[(Online\-Programm|Themenschwerpunkt):\s*([\w\s\p{L}]*)\]/iu", $post_content, $specialCatMatch);
+		preg_match("/\[(Online\-Programm|Themenschwerpunkt|Reihe|MOOC):\s*([\w\s\p{L}]*)\]/iu", $post_content, $specialCatMatch);
 		$extracat = array();
 			
-		if(count($specialCatMatch) == 3) {
+                //changed from if to while for multiple Special Categories + added one line
+		while(count($specialCatMatch) == 3) {
 			$extracat[] = $this->get_tax(trim($specialCatMatch[1])." ".trim($specialCatMatch[2]));
 			$post_content = str_replace($specialCatMatch[0], "", $post_content);
+                        preg_match("/\[(Online\-Programm|Themenschwerpunkt|Reihe|MOOC):\s*([\w\s\p{L}]*)\]/iu", $post_content, $specialCatMatch);
 		}		
 		
 		$cats = array_merge(array($cat), $extracat);
@@ -301,7 +303,7 @@ class PhOnlineEventImporter{
 	private function makeEventTimeData($data, $wp_event_id) {
 		
 		
-		$newData = array();
+		$newData = $data;
 
 		$startTimestamp = strtotime($data["EventStartDate"]);
 		$endTimestamp = strtotime($data["EventEndDate"]);
