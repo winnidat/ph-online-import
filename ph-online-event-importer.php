@@ -434,7 +434,7 @@ class PhOnlineEventImporter{
 		switch ($category) {
 		    case "eLecture":
 		    
-					$content ='<img class="alignleft wp-image-354 size-full" src="http://onlinecampus-server.at/vphneu/wp-content/uploads/2016/03/logo_electures_RGB_500px.jpg" alt="Symbolbild fÃ¼r Veranstaltungskategorie eLectures" width="210" height="71" />
+					$content ='<img class="alignleft wp-image-354 size-full" src="http://onlinecampus-server.at/vphneu/wp-content/uploads/2016/03/logo_electures_RGB_500px.jpg" alt="Symbolbild für Veranstaltungskategorie eLectures" width="210" height="71" />
 						
 						<div class="buttonsright">
 						[button link="'.$data["meta_input"]["lvurl"].'" color="silver" newwindow="yes"]<img class="alignnone size-full wp-image-1960" src="http://onlinecampus-server.at/vphneu/wp-content/uploads/2016/03/zur-anmeldung.png" alt="Zur Anmeldung (PH Online)" width="263" height="50" />[/button]
@@ -454,7 +454,7 @@ class PhOnlineEventImporter{
 		        break;
 		    case "Online-Seminar":
 
-					$content ='<img class="alignleft wp-image-354 size-full" src="http://onlinecampus-server.at/vphneu/wp-content/uploads/2016/03/Logo_KOS_500px_RGB-transparent.png" alt="Symbolbild fÃ¼r Veranstaltungskategorie Online Seminar" width="210" height="71" />
+					$content ='<img class="alignleft wp-image-354 size-full" src="http://onlinecampus-server.at/vphneu/wp-content/uploads/2016/03/Logo_KOS_500px_RGB-transparent.png" alt="Symbolbild für Veranstaltungskategorie Online Seminar" width="210" height="71" />
 						
 						<div class="buttonsright">
 						[button link="'.$data["meta_input"]["lvurl"].'" color="silver" newwindow="yes"]<img class="alignnone size-full wp-image-1960" src="http://onlinecampus-server.at/vphneu/wp-content/uploads/2016/03/zur-anmeldung.png" alt="Zur Anmeldung (PH Online)" width="263" height="50" />[/button]
