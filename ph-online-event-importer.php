@@ -243,12 +243,21 @@ class PhOnlineEventImporter{
 			
 		// Special Categories
 		
-		preg_match("/\[(Online\-Programm|Themenschwerpunkt):\s*([\w\s\p{L}]*)\]/iu", $post_content, $specialCatMatch);
+		preg_match("/\[(Online\-Programm|Themenschwerpunkt|Reihe|MOOC):\s*([\w\s\p{L}]*)\]/iu", $post_content, $specialCatMatch);
 		$extracat = array();
+                
+                
+                preg_match("/(?:CoModeration:)\s*(\w+)*\s([^\s]+)/iu", $post_content, $comod);
+		if(count($comod) > 0)
+		{   
+			$data["CoMod"]=$comod[1]." ".$comod[2];
+		}
 			
-		if(count($specialCatMatch) == 3) {
+                //changed from if to while for multiple Special Categories + added one line
+		while(count($specialCatMatch) == 3) {
 			$extracat[] = $this->get_tax(trim($specialCatMatch[1])." ".trim($specialCatMatch[2]));
 			$post_content = str_replace($specialCatMatch[0], "", $post_content);
+                        preg_match("/\[(Online\-Programm|Themenschwerpunkt|Reihe|MOOC):\s*([\w\s\p{L}]*)\]/iu", $post_content, $specialCatMatch);
 		}		
 		
 		$cats = array_merge(array($cat), $extracat);
@@ -269,7 +278,8 @@ class PhOnlineEventImporter{
 		$data["post_title"] = (string)$singleEvent->course->courseName->text;
 		$data["tax_input"] = array("tribe_events_cat" => $cats);		
 		$data["post_content"] = nl2br($post_content);
-		$data["meta_input"]["course_order"] = (string)$singleEvent->course->courseCode;
+		$data["meta_input"]["co_moderation"] = $data["CoMod"];
+                $data["meta_input"]["course_order"] = (string)$singleEvent->course->courseCode;
 		$data["meta_input"]["course_id"] = (string)$singleEvent->course->courseID;
 		$data["meta_input"]["summary"] = (string)$event->summary;
 		$data["meta_input"]["lvurl"] = (string)$event->description["altrep"];
@@ -301,7 +311,7 @@ class PhOnlineEventImporter{
 	private function makeEventTimeData($data, $wp_event_id) {
 		
 		
-		$newData = array();
+		$newData = $data;
 
 		$startTimestamp = strtotime($data["EventStartDate"]);
 		$endTimestamp = strtotime($data["EventEndDate"]);
@@ -377,9 +387,9 @@ class PhOnlineEventImporter{
 	private function createEvent($data){
 				
 		$event_id = tribe_create_event($data);
-				
+					
 		if($event_id !== false){
-			
+			wp_set_post_tags( $event_id, $data["CoMod"], false );
 			$this->updateTerms($event_id, $data);
 								
 			$this->logLine("EVENT CREATED ".$event_id);
@@ -392,9 +402,8 @@ class PhOnlineEventImporter{
 	private function updateEvent($id, $data){
 		
 		$event_id = tribe_update_event($id, $data);
-		
-		if($event_id !== false){
-
+                		if($event_id !== false){
+                        wp_set_post_tags( $event_id, $data["CoMod"], false );	
 			$this->updateTerms($event_id, $data);
 
 			$this->logLine("EVENT UPDATED ".$event_id);
