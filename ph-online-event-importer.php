@@ -4,7 +4,7 @@ use \PHOnlineToken\Token;
 
 class PhOnlineEventImporter{
 	
-    
+    /*git te^12^123112323t*/
 	private $log = "";
 	private $numUpdated = 0;
 	private $numCreated = 0;
@@ -103,7 +103,7 @@ class PhOnlineEventImporter{
 			}							
 		}
 
-		$this->logLine("-------");
+		$this->logLine("--------");
 		$this->logLine("IMPORT END");
 		$this->logLine("EVENTS CREATED: ".$this->numCreated);
 		$this->logLine("EVENTS UPDATED: ".$this->numUpdated);
