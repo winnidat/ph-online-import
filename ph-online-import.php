@@ -1,7 +1,7 @@
 <?php
 /*
- Plugin Name: PH Online Import
- Version: 1.0
+ Plugin Name: PH Online Import Austria
+ Version: 0.1
  Author: Fabian Pimminger
  Author URI: http://fabianpimminger.com
  */
@@ -22,7 +22,7 @@
 /**
 * Wordpress PH Online Import
 *
-* @package    PH Online Import
+* @package    PH Online Import Austria
 * @copyright  2016 Fabian Pimminger
 * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
 * @author     Fabian Pimminger @link http://fabianpimminger.com
@@ -67,7 +67,7 @@ class PhOnlineImportPlugin{
   }
 
 	public function plugin_classes() {
-		$this->importer = new PhOnlineEventImporter();
+		$this->importer = new PhOnlineEventImporterAustria();
 		$this->deleter = new PhOnlineEventDeleter();
 	}
 
@@ -182,10 +182,10 @@ class PhOnlineImportPlugin{
 		if($this->get_last_import_time() + 900 < time()){			
 			if(isset($_POST["ph_online_start_event_import"])){
 				
-				// Remove comment for debugging in the next line
-				// $this->importer->import();
+				//Remove comment for debugging in the next line
+				$this->importer->import();
 				// Comment out next line for debugging
-		        $this->schedule_import_now();		
+		        //$this->schedule_import_now();		
 				echo "<pre>Event-Import wurde gestartet. Ergebnisse gibt es in ungefähr 15 Minuten auf dieser Seite: <a href='".home_url("/wp-admin/tools.php?page=ph-online-import-log")."'>Status-Ansicht</a></pre>";
 				
 			}else{			

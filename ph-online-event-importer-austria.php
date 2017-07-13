@@ -2,10 +2,10 @@
 use \ForceUTF8\Encoding;
 use \PHOnlineToken\Token;
 
-class PhOnlineEventImporter{
+class PhOnlineEventImporterAustria{
 	
-    /*git te^12^123112323t*/
-	private $log = "";
+    
+   	private $log = "";
 	private $numUpdated = 0;
 	private $numCreated = 0;
 	private $categories = array("Online-Seminar", "eLecture", "eWorkshop");
@@ -39,6 +39,14 @@ class PhOnlineEventImporter{
 	}
 	
 	public function import(){
+		
+    foreach ($this->token as $tok) {
+     			$this->startImport($tok);
+     		}	
+    }
+    
+    public function startImport($token){
+
 		$this->importid = uniqid();
 		$this->importStartedTimestamp = time();
 		
@@ -51,7 +59,7 @@ class PhOnlineEventImporter{
 		$fromtime = strtotime("today -100 days");
 		$untiltime = strtotime("today +1 year");
 		
-		$url = "https://www.ph-online.ac.at/ph-bgldj/ws/webservice_v1.0/xcal/organization/courses/xml?token=". $this->token ."&timeMode=absolute&orgUnitID=15304&fromDate=".date("Ymd", $fromtime)."&untilDate=".date("Ymd", $untiltime);		
+		$url = $token ."&timeMode=absolute&orgUnitID=15304&fromDate=".date("Ymd", $fromtime)."&untilDate=".date("Ymd", $untiltime);		
 
 		$this->logLine("URL: ".$url);
 		$this->logLine("-------");
@@ -59,9 +67,9 @@ class PhOnlineEventImporter{
 		
 		//$url = plugin_dir_path( __FILE__ )."sample2.xml";
 		
-		$content = Encoding::toUTF8($this->getUrl($url));
-		
-		$xml = simplexml_load_string($content);
+		//$content = Encoding::toUTF8($this->getUrl($url));
+		$xml = simplexml_load_string(file_get_contents($url)); 
+		//$xml = simplexml_load_string($content);
 
 		
 		//$xml = $this->loadXML($url);
@@ -115,6 +123,8 @@ class PhOnlineEventImporter{
 		
 	}
 	
+	
+
 	private function loadXML($url){
 		$this->logLine("Load XML: ".$url);
 
@@ -242,7 +252,7 @@ class PhOnlineEventImporter{
 		$this->logLine("Cat-ID: ".$cat);
 			
 		// Special Categories
-		
+		//need to add Cats for different PH
 		preg_match("/\[(Online\-Programm|Themenschwerpunkt|Reihe|MOOC):\s*([\w\s\p{L}]*)\]/iu", $post_content, $specialCatMatch);
 		$extracat = array();
                 
