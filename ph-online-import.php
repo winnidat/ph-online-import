@@ -29,7 +29,7 @@
 * @version    1.2
 */
 
-require_once("ph-online-event-importer.php");
+require_once("ph-online-event-importer-austria.php");
 require_once("ph-online-event-deleter.php");
 require_once("Encoding.php");
 require_once ("ph-online-token.php");
