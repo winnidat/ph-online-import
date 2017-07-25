@@ -4,7 +4,6 @@ use \PHOnlineToken\Token;
 
 class PhOnlineEventImporterAustria{
 	
-
 	private $log = "";
 	private $numUpdated = 0;
 	private $numCreated = 0;
@@ -60,8 +59,8 @@ class PhOnlineEventImporterAustria{
 		$this->logLine("IMPORT START");
 		$this->logLine(date("c", current_time( 'timestamp' )));
 		
-		$fromtime = strtotime("today -10 days");
-		$untiltime = strtotime("today +12 months");
+		$fromtime = strtotime("today -100 days");
+		$untiltime = strtotime("today +1 year");
 		
 		$url = $token ."&timeMode=absolute&orgUnitID=15304&fromDate=".date("Ymd", $fromtime)."&untilDate=".date("Ymd", $untiltime);		
 
@@ -69,7 +68,7 @@ class PhOnlineEventImporterAustria{
 		$this->logLine("-------");
 
 		
-		//$url = plugin_dir_path( __FILE__ )."sample2.xml";
+	    //$url = plugin_dir_path( __FILE__ )."sample2.xml";
 		
 		//$content = Encoding::toUTF8($this->getUrl($url));
 		$xml = simplexml_load_string(file_get_contents($url)); 
@@ -234,8 +233,6 @@ class PhOnlineEventImporterAustria{
 			
 		}
 		$xml = simplexml_load_string(file_get_contents(utf8_encode($this->url_token."&courseID=".$id)));
-		
-
 		return $xml;
 
 	}
@@ -246,47 +243,63 @@ class PhOnlineEventImporterAustria{
 		$startTimestamp = strtotime((string)$event->dtstart);
 		$endTimestamp = strtotime((string)$event->dtend);
 		$post_content = (string)$singleEvent->course->courseDescription;
+		//tagtester
+		//$post_content .= "[digikomp A]"." "."[digikomp H]"." "."[digitag online]"; 
 
 		//categories
-		preg_match("/\[(digikomp A|digikomp B|digikomp C|digikomp D|digikomp E|digikomp F|digikomp F|Reihe: DigiFD):\s*([\w\s\p{L}]*)\]/iu", $post_content, $specialCatMatch);
-		$extracat = array();
+		preg_match_all("/\[(digikomp A|digikomp B|digikomp C|digikomp D|digikomp E|digikomp F|digikomp F|digikomp H|Reihe: DigiFD|digatag präsenz|digitag online|digitag blended)\]/iu", $post_content, $specialCatMatch);
 
-        //parse for cats
-		while(count($specialCatMatch) == 3) {
-			$temp_cat = array();
-			$temp_cat = $this->get_tax(trim($specialCatMatch[1])." ".trim($specialCatMatch[2]));
-			switch ($temp_cat) {
+		$extracat = array();
+		$tags = array();
+		
+        //parse for cats and tags
+		foreach ($specialCatMatch[1] as $match) {
+			switch ($match) {
+				//cats
 				case "digikomp A":
-				$extracat[] = "A – Digitale Kompetenzen und informatische Bildung";
+				$extracat[] = $this->get_tax("A – Digitale Kompetenzen und informatische Bildung");
 				break;
 				case "digikomp B":
-				$extracat[] = "B – Digital Leben";
+				$extracat[] = $this->get_tax("B – Digital Leben");
 				break;
 				case "digikomp C":
-				$extracat[] = "C – Digital Materialien gestalten";
+				$extracat[] = $this->get_tax("C – Digital Materialien gestalten");
 				break;
 				case "digikomp D":
-				$extracat[] = "D – Digital Lehren und Lernen";
+				$extracat[] = $this->get_tax("D – Digital Lehren und Lernen");
 				break;
 				case "digikomp E":
-				$extracat[] = "E – Digital Lehren und Lernen im Fach";
+				$extracat[] = $this->get_tax("E – Digital Lehren und Lernen im Fach");
 				break;
 				case "digikomp F":
-				$extracat[] = "F – Digital Verwalten";
+				$extracat[] = $this->get_tax("F – Digital Verwalten");
 				break;
 				case "digikomp G":
-				$extracat[] = "G – Digitale Schulgemeinschaft";
+				$extracat[] = $this->get_tax("G – Digitale Schulgemeinschaft");
 				break;
 				case "digikomp H":
-				$extracat[] = "H – Digital-inklusive Professionsentwicklung";
+				$extracat[] = $this->get_tax("H – Digital-inklusive Professionsentwicklung");
+				break;
+				case "Reihe: DigiFD":
+				$extracat[] = $this->get_tax("H – Digital-inklusive Professionsentwicklung");
+				break;
+				
+				//tags
+				case "digitag online":
+				$tags[] = "online";
+				break;
+				case "digitag präsenz":
+				$tags[] = "präsenz";
+				break;
+				case "digitag blended":
+				$tags[] = "blended learning";
 				break;
 			}
-			$post_content = str_replace($specialCatMatch[0], "", $post_content);
-			preg_match("/\[((Online\-Programm|digikomp A|digikomp B|digikomp C|digikomp D|digikomp E|digikomp F):\s*([\w\s\p{L}]*)\]/iu", $post_content, $specialCatMatch);
+			$post_content = str_replace("[".$match."]", "", $post_content);
 		}		
 		
-		$cats = array_merge(array($cat), array($temp_cat));
-
+		$cats = $extracat;
+		$data["tags"] = $tags; 
 		$organizer = array();
 		$organizer["OrganizerID"] = "";
 		$organizer_id = $this->get_organizer($this->ph);
@@ -308,7 +321,7 @@ class PhOnlineEventImporterAustria{
 		$data["tax_input"] = array("tribe_events_cat" => $cats);
 		$data["Venue"] = (string)$singleEvent->course->courseCode;;	
 		$data["post_content"] = nl2br($post_content);
-		$data["meta_input"]["co_moderation"] = $data["CoMod"];
+		
 		$data["meta_input"]["course_order"] = (string)$singleEvent->course->courseCode;
 		$data["meta_input"]["course_id"] = (string)$singleEvent->course->courseID;
 		$data["meta_input"]["summary"] = (string)$event->summary;
@@ -317,6 +330,7 @@ class PhOnlineEventImporterAustria{
 		$data["meta_input"]["last_import"] = (string)time();
 		$data["EventStartDate"] = date("Y-m-d", $startTimestamp);
 		$data["EventEndDate"] = date("Y-m-d", $endTimestamp);
+		$data["Organizer"] = $organizer;
 
 		if($catName == "eLecture"){
 			$data["EventStartHour"] = date("H", $startTimestamp);
@@ -327,7 +341,7 @@ class PhOnlineEventImporterAustria{
 			$data["EventAllDay"] = true;			
 		}
 
-		$data["Organizer"] = $organizer;
+		
 
 		if($catName === "eLecture"){
 			$data["meta_input"]["course_room"] = $this->get_course_room((string)$singleEvent->course->admissionInfo->admissionDescription);
@@ -336,131 +350,131 @@ class PhOnlineEventImporterAustria{
 		$data["post_content"] = $this->contentForEvent($singleEvent, $catName, $data);
 
 		return $data;
+	}
+
+	private function makeEventTimeData($data, $wp_event_id) {
+
+
+		$newData = $data;
+
+		$startTimestamp = strtotime($data["EventStartDate"]);
+		$endTimestamp = strtotime($data["EventEndDate"]);
+
+		$newData["EventStartDate"] = $data["EventStartDate"];
+		$newData["EventEndDate"] = $data["EventEndDate"];
+
+		$newStartTimestamp = strtotime(get_post_meta($wp_event_id, "_EventStartDate", true));
+		$newEndTimestamp = strtotime(get_post_meta($wp_event_id, "_EventEndDate", true));
+
+		if($newStartTimestamp < $startTimestamp){
+			$newData["EventStartDate"] = date("Y-m-d", $newStartTimestamp);
 		}
 
-		private function makeEventTimeData($data, $wp_event_id) {
-
-
-			$newData = $data;
-
-			$startTimestamp = strtotime($data["EventStartDate"]);
-			$endTimestamp = strtotime($data["EventEndDate"]);
-
-			$newData["EventStartDate"] = $data["EventStartDate"];
-			$newData["EventEndDate"] = $data["EventEndDate"];
-
-			$newStartTimestamp = strtotime(get_post_meta($wp_event_id, "_EventStartDate", true));
-			$newEndTimestamp = strtotime(get_post_meta($wp_event_id, "_EventEndDate", true));
-
-			if($newStartTimestamp < $startTimestamp){
-				$newData["EventStartDate"] = date("Y-m-d", $newStartTimestamp);
-			}
-
-			if($newEndTimestamp > $endTimestamp){
-				$newData["EventEndDate"] = date("Y-m-d", $newEndTimestamp);
-			}
-
-			$newData["EventAllDay"] = true;			
-
-			return $newData;
+		if($newEndTimestamp > $endTimestamp){
+			$newData["EventEndDate"] = date("Y-m-d", $newEndTimestamp);
 		}
 
-		private function createOrUpdateEvent($courseID, $data){
+		$newData["EventAllDay"] = true;			
 
-			$event_id = false;
+		return $newData;
+	}
 
-			$args = array(
-				'meta_query' => array(
-					'relation' => 'AND',
-					array(
-						'key' => 'course_id',
-						'value' => $courseID
-						),
-					array(
-						"key" => "summary",
-						"value" => $data["meta_input"]["summary"]
-						)
+	private function createOrUpdateEvent($courseID, $data){
+
+		$event_id = false;
+
+		$args = array(
+			'meta_query' => array(
+				'relation' => 'AND',
+				array(
+					'key' => 'course_id',
+					'value' => $courseID
 					),
-				'post_type' => 'tribe_events',
-				'post_status' => 'publish',
-				'posts_per_page' => -1
-				);
-			$events = get_posts($args);	
+				array(
+					"key" => "summary",
+					"value" => $data["meta_input"]["summary"]
+					)
+				),
+			'post_type' => 'tribe_events',
+			'post_status' => 'publish',
+			'posts_per_page' => -1
+			);
+		$events = get_posts($args);	
 
-			if(count($events) < 1){
-				$event_id = $this->createEvent($data);
-				$this->numCreated++;
+		if(count($events) < 1){
+			$event_id = $this->createEvent($data);
+			$this->numCreated++;
+		}else{
+			if(get_post_meta($events[0]->ID, "importid", true) == $this->importid){
+
+				$this->logLine("UPDATE ONLY TIME OF EVENT ".$event_id);
+				$data = $this->makeEventTimeData($data, $events[0]->ID);
+				$event_id = $this->updateEvent($events[0]->ID, $data);
+
 			}else{
-				if(get_post_meta($events[0]->ID, "importid", true) == $this->importid){
 
-					$this->logLine("UPDATE ONLY TIME OF EVENT ".$event_id);
-					$data = $this->makeEventTimeData($data, $events[0]->ID);
-					$event_id = $this->updateEvent($events[0]->ID, $data);
-
-				}else{
-
-					if(strtotime(get_post_meta($events[0]->ID, "_EventStartDate", true)) <= $this->importStartedTimestamp){
-						$this->logLine("EVENT ALREADY BEGUN, NOT UPDATED");
-						return $events[0]->ID;
-					}
-
-					$this->logLine("UPDATE WHOLE EVENT ".$event_id);
-					$event_id = $this->updateEvent($events[0]->ID, $data);
-					$this->numUpdated++;	
+				if(strtotime(get_post_meta($events[0]->ID, "_EventStartDate", true)) <= $this->importStartedTimestamp){
+					$this->logLine("EVENT ALREADY BEGUN, NOT UPDATED");
+					return $events[0]->ID;
 				}
-			}
 
-			return $event_id; 
-
-		}
-
-		private function createEvent($data){
-
-			$event_id = tribe_create_event($data);
-
-			if($event_id !== false){
-					//wp_set_post_tags( $event_id, $data["CoMod"], false );
-				$this->updateTerms($event_id, $data);
-
-				$this->logLine("EVENT CREATED ".$event_id);
-			}
-
-			return $event_id;
-
-		}	
-
-		private function updateEvent($id, $data){
-
-			$event_id = tribe_update_event($id, $data);
-			if($event_id !== false){
-					//wp_set_post_tags( $event_id, $data["CoMod"], false );	
-				$this->updateTerms($event_id, $data);
-
-				$this->logLine("EVENT UPDATED ".$event_id);
-			}
-
-			return $event_id;
-
-		}
-
-		private function updateTerms($event_id, $data){
-			if(isset($event_id) && $event_id !== false && isset($data["tax_input"]["tribe_events_cat"])){
-				wp_set_object_terms($event_id, $data["tax_input"]["tribe_events_cat"], "tribe_events_cat");
-				$this->logLine("Categories updated");
-			}else{
-				$this->logLine("No Categories to set");
+				$this->logLine("UPDATE WHOLE EVENT ".$event_id);
+				$event_id = $this->updateEvent($events[0]->ID, $data);
+				$this->numUpdated++;	
 			}
 		}
 
-		private function contentForEvent($event, $category, $data) {
+		return $event_id; 
 
-			$content = "";
-			$learningObjectives = $this->linkify((string)$event->course->learningObjectives);
-			$admission = $this->linkify((string)$event->course->admissionInfo->admissionDescription);
-			$recommendedPrerequisites = $this->linkify($data["meta_input"]["course_prerequisites"]);
-			$post_content = $this->linkify($data["post_content"]);
+	}
 
-			switch ($category) {
+	private function createEvent($data){
+
+		$event_id = tribe_create_event($data);
+
+		if($event_id !== false){
+			wp_set_post_tags( $event_id, $data["tags"], false );
+			$this->updateTerms($event_id, $data);
+
+			$this->logLine("EVENT CREATED ".$event_id);
+		}
+
+		return $event_id;
+
+	}	
+
+	private function updateEvent($id, $data){
+
+		$event_id = tribe_update_event($id, $data);
+		if($event_id !== false){
+			wp_set_post_tags( $event_id, $data["tags"], false );	
+			$this->updateTerms($event_id, $data);
+
+			$this->logLine("EVENT UPDATED ".$event_id);
+		}
+
+		return $event_id;
+
+	}
+
+	private function updateTerms($event_id, $data){
+		if(isset($event_id) && $event_id !== false && isset($data["tax_input"]["tribe_events_cat"])){
+			wp_set_object_terms($event_id, $data["tax_input"]["tribe_events_cat"], "tribe_events_cat");
+			$this->logLine("Categories updated");
+		}else{
+			$this->logLine("No Categories to set");
+		}
+	}
+
+	private function contentForEvent($event, $category, $data) {
+
+		$content = "";
+		$learningObjectives = $this->linkify((string)$event->course->learningObjectives);
+		$admission = $this->linkify((string)$event->course->admissionInfo->admissionDescription);
+		$recommendedPrerequisites = $this->linkify($data["meta_input"]["course_prerequisites"]);
+		$post_content = $this->linkify($data["post_content"]);
+
+		switch ($category) {
 					/*case "eLecture":
 
 					$content ='<img class="alignleft wp-image-354 size-full" src="http://onlinecampus-server.at/vphneu/wp-content/uploads/2016/03/logo_electures_RGB_500px.jpg" alt="Symbolbild für Veranstaltungskategorie eLectures" width="210" height="71" />
@@ -561,4 +575,4 @@ class PhOnlineEventImporterAustria{
 			return preg_replace_callback('/<(\d+)>/', function ($match) use (&$links) { return $links[$match[1] - 1]; }, $value);
 		}
 
-		}
+	}
