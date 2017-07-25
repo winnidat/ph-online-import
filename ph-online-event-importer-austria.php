@@ -260,55 +260,55 @@ class PhOnlineEventImporterAustria{
 		//$post_content .= "[digikomp A]"." "."[digikomp H]"." "."[digitag online]"; 
 
 		//categories
-		preg_match_all("/\[(digikomp A|digikomp B|digikomp C|digikomp D|digikomp E|digikomp F|digikomp F|digikomp H|Reihe: DigiFD|digatag präsenz|digitag online|digitag blended)\]/iu", $post_content, $specialCatMatch);
+		preg_match_all("/(\[.*?\])/iu", $post_content, $specialCatMatch);
 
 		$extracat = array();
 		$tags = array();
 
         //parse for cats and tags
-		foreach ($specialCatMatch[1] as $match) {
+		foreach ($specialCatMatch[0] as $match) {
 			switch ($match) {
 				//cats
-				case "digikomp A":
+				case "[digikomp A]":
 				$extracat[] = $this->get_tax("A – Digitale Kompetenzen und informatische Bildung");
 				break;
-				case "digikomp B":
+				case "[digikomp B]":
 				$extracat[] = $this->get_tax("B – Digital Leben");
 				break;
-				case "digikomp C":
+				case "[digikomp C]":
 				$extracat[] = $this->get_tax("C – Digital Materialien gestalten");
 				break;
 				case "digikomp D":
 				$extracat[] = $this->get_tax("D – Digital Lehren und Lernen");
 				break;
-				case "digikomp E":
+				case "[digikomp E]":
 				$extracat[] = $this->get_tax("E – Digital Lehren und Lernen im Fach");
 				break;
-				case "digikomp F":
+				case "[digikomp F]":
 				$extracat[] = $this->get_tax("F – Digital Verwalten");
 				break;
-				case "digikomp G":
+				case "[digikomp G]":
 				$extracat[] = $this->get_tax("G – Digitale Schulgemeinschaft");
 				break;
-				case "digikomp H":
+				case "[digikomp H]":
 				$extracat[] = $this->get_tax("H – Digital-inklusive Professionsentwicklung");
 				break;
-				case "Reihe: DigiFD":
+				case "[Reihe: DigiFD]":
 				$extracat[] = $this->get_tax("H – Digital-inklusive Professionsentwicklung");
 				break;
 				
 				//tags
-				case "digitag online":
+				case "[digitag online]":
 				$tags[] = "online";
 				break;
-				case "digitag präsenz":
+				case "[digitag präsenz]":
 				$tags[] = "präsenz";
 				break;
-				case "digitag blended":
+				case "[digitag blended]":
 				$tags[] = "blended learning";
 				break;
 			}
-			$post_content = str_replace("[".$match."]", "", $post_content);
+			$post_content = str_replace($match, "", $post_content);
 		}		
 		
 		$cats = $extracat;
@@ -318,11 +318,11 @@ class PhOnlineEventImporterAustria{
 		$organizer["OrganizerID"] = "";
 		$organizer_id = $this->get_organizer($this->ph);
 		$organizer["OrganizerID"][] = $organizer_id;
-        
-        $venue = array();
-        $venue["Venue"] = (string)$event->location;
-        $venue["VenueID"]  = $this->get_venue($venue["Venue"]); 
-        
+
+		$venue = array();
+		$venue["Venue"] = (string)$event->location;
+		$venue["VenueID"]  = $this->get_venue($venue["Venue"]); 
+
 		foreach($singleEvent->course->contacts->person as $person){
 			$data["meta_input"]["instructors"]="";
 			$comma = "";
@@ -550,7 +550,25 @@ class PhOnlineEventImporterAustria{
 
 				default:
 
-				$content = $post_content;
+				$content ='
+
+				<div class="buttonsright">
+					[button link="'.$data["meta_input"]["lvurl"].'" color="silver" newwindow="yes"][/button]
+
+					<div class="clearfix"></div>';
+					if(!is_null($data["meta_input"]["course_room"])){
+						$content .='<a style="margin-left: 15px;" href="'.$data["meta_input"]["course_room"].'" target="_blank"><img class="alignnone size-full wp-image-2059" src="http://onlinecampus-server.at/vphneu/wp-content/uploads/2016/03/zum-lernraum.png" alt="Zum virtuellen Lernraum" width="238" height="39" /></a>
+					</div>
+					<div class="clearfix"></div>';
+				}
+
+				$content .=	$post_content.'
+
+
+				[tabs slidertype="top tabs"] [tabcontainer] [tabtext]Teilnahmekriterien & Info [/tabtext] [tabtext]Lernziele[/tabtext] [tabtext]Voraussetzungen[/tabtext] [/tabcontainer] [tabcontent] [tab]'.$admission.'[/tab] [tab]'.$learningObjectives.'[/tab] [tab] '.$recommendedPrerequisites.'[/tab] [/tabcontent] [/tabs]
+
+				';
+				
 				break;
 			}
 
