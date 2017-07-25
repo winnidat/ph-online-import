@@ -204,7 +204,6 @@ class PhOnlineEventImporterAustria{
 		return $term_id;
 	}
 
-
 	private function get_organizer($name) {
 		
 		$organizer_id = false;
@@ -223,6 +222,20 @@ class PhOnlineEventImporterAustria{
 		}
 		
 		return $organizer_id;
+	}
+
+	private function get_venue($name) {
+		
+		$venue_id = null;
+		$venue = get_page_by_title($name, OBJECT, 'tribe_venue');
+
+		if($venue == null){
+			$venue_id = tribe_create_venue(array("Venue" => $name));	
+		}else{
+			$venue_id = $venue->ID;
+		}
+		
+		return $venue_id;
 	}
 	
 	private function loadEvent($id){
@@ -251,7 +264,7 @@ class PhOnlineEventImporterAustria{
 
 		$extracat = array();
 		$tags = array();
-		
+
         //parse for cats and tags
 		foreach ($specialCatMatch[1] as $match) {
 			switch ($match) {
@@ -300,12 +313,16 @@ class PhOnlineEventImporterAustria{
 		
 		$cats = $extracat;
 		$data["tags"] = $tags; 
+		
 		$organizer = array();
 		$organizer["OrganizerID"] = "";
 		$organizer_id = $this->get_organizer($this->ph);
 		$organizer["OrganizerID"][] = $organizer_id;
-
-
+        
+        $venue = array();
+        $venue["Venue"] = (string)$event->location;
+        $venue["VenueID"]  = $this->get_venue($venue["Venue"]); 
+        
 		foreach($singleEvent->course->contacts->person as $person){
 			$data["meta_input"]["instructors"]="";
 			$comma = "";
@@ -319,7 +336,8 @@ class PhOnlineEventImporterAustria{
 		$data["post_status"] = "publish";
 		$data["post_title"] = (string)$singleEvent->course->courseName->text;
 		$data["tax_input"] = array("tribe_events_cat" => $cats);
-		$data["Venue"] = (string)$singleEvent->course->courseCode;;	
+		
+		$data["Venue"] = $venue;		
 		$data["post_content"] = nl2br($post_content);
 		
 		$data["meta_input"]["course_order"] = (string)$singleEvent->course->courseCode;
