@@ -70,9 +70,10 @@ class PhOnlineEventImporterAustria{
 		
 	    //$url = plugin_dir_path( __FILE__ )."sample2.xml";
 		
-		//$content = Encoding::toUTF8($this->getUrl($url));
-		$xml = simplexml_load_string(file_get_contents($url)); 
-		//$xml = simplexml_load_string($content);
+		//localxml
+		//$xml = simplexml_load_string(file_get_contents($url)); 
+		$content = Encoding::toUTF8($this->getUrl($url));
+		$xml = simplexml_load_string($content);
 
 		
 		//$xml = $this->loadXML($url);
@@ -245,7 +246,10 @@ class PhOnlineEventImporterAustria{
 			return false;
 			
 		}
-		$xml = simplexml_load_string(file_get_contents(utf8_encode($this->url_token."&courseID=".$id)));
+		//wp xml
+		$xml = $this->loadXML($this->url_token."&courseID=".$id);
+		//local xml
+		//$xml = simplexml_load_string(file_get_contents(utf8_encode($this->url_token."&courseID=".$id)));
 		return $xml;
 
 	}
