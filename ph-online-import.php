@@ -179,7 +179,7 @@ class PhOnlineImportPlugin{
 		
 		echo "<h1>Status</h1>";
 						
-		if($this->get_last_import_time() + 900 < time()){			
+		if($this->get_last_import_time() + 1 < time()){			
 			if(isset($_POST["ph_online_start_event_import"])){
 				
 				//Remove comment for debugging in the next line
