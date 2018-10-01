@@ -8,7 +8,7 @@ class PhOnlineEventImporter{
 	private $log = "";
 	private $numUpdated = 0;
 	private $numCreated = 0;
-	private $categories = array("Online-Seminar", "eLecture", "eWorkshop");
+	private $categories = array("Online-Seminar", "eLecture", "eWorkshop", "Fortbildungsveranstaltung");
 	private $importrun = 0;
 	private $importStartedTimestamp = 0;
 	private $token = null;
@@ -238,27 +238,36 @@ class PhOnlineEventImporter{
 		$catName = (string)$event->categories->item;
 		$cat = $this->get_tax($catName);
 		
-		$this->logLine("Cat-Name: ".$catName);
+		$this->logLine("Cat-Name-: ".$catName);
 		$this->logLine("Cat-ID: ".$cat);
 			
 		// Special Categories
 		
-		preg_match("/\[(Online\-Programm|Themenschwerpunkt|Reihe|MOOC):\s*([\w\s\p{L}]*)\]/iu", $post_content, $specialCatMatch);
 		$extracat = array();
+        $bracket = array();
+        $buttonclass = array();
                 
-                
-                preg_match("/(?:CoModeration:)\s*(\w+)*\s([^\s]+)/iu", $post_content, $comod);
+        preg_match("/(?:CoModeration:)\s*(\w+)*\s([^\s]+)/iu", $post_content, $comod);
 		if(count($comod) > 0)
 		{   
 			$data["CoMod"]=$comod[1]." ".$comod[2];
 		}
-			
+	    
+		preg_match("/\[(.*)\]/iu", $post_content, $bracket);
+		$this->logLine("tag: ".$bracket[0]);
+
+		$brackettmp =  $bracket[0];
+		preg_match("/(online\-programm|Online\-Programm|Themenschwerpunkt|Reihe|MOOC|Online\-Tagung):\s*([\w\s\p{L}]*)/iu", $bracket[0], $specialCatMatch);
+		
                 //changed from if to while for multiple Special Categories + added one line
 		while(count($specialCatMatch) == 3) {
+			$this->logLine("CatMatch: ".$specialCatMatch[1]. " ".$specialCatMatch[2]);
 			$extracat[] = $this->get_tax(trim($specialCatMatch[1])." ".trim($specialCatMatch[2]));
-			$post_content = str_replace($specialCatMatch[0], "", $post_content);
-                        preg_match("/\[(Online\-Programm|Themenschwerpunkt|Reihe|MOOC):\s*([\w\s\p{L}]*)\]/iu", $post_content, $specialCatMatch);
+			$bracket[0] = str_replace($specialCatMatch[0], "", $bracket[0]);
+                        preg_match("/(Online\-Programm|Themenschwerpunkt|Reihe|MOOC|Online\-Tagung):\s*([\w\s\p{L}]*)/iu", $bracket[0], $specialCatMatch);
 		}		
+
+		$post_content = str_replace($brackettmp, "", $post_content);
 		
 		$cats = array_merge(array($cat), $extracat);
 				
@@ -283,11 +292,24 @@ class PhOnlineEventImporter{
 		$data["meta_input"]["course_id"] = (string)$singleEvent->course->courseID;
 		$data["meta_input"]["summary"] = (string)$event->summary;
 		$data["meta_input"]["lvurl"] = (string)$event->description["altrep"];
+		preg_match("/\/ph-(.*)\//iu", $data["meta_input"]["lvurl"], $buttonclass); 
+		switch ($buttonclass[0]) {
+			case 'bgld': 
+				$buttoncss = "Burgenland";
+				break;
+			
+			case 'ooe':
+				$buttoncss = "Oberösterreich";
+				break;
+			default:
+				$buttoncss = "Burgenland";
+				break;	
+		}
 		$data["meta_input"]["course_prerequisites"] = (string)$singleEvent->course->recommendedPrerequisites;
 		$data["meta_input"]["last_import"] = (string)time();
 		$data["EventStartDate"] = date("Y-m-d", $startTimestamp);
 		$data["EventEndDate"] = date("Y-m-d", $endTimestamp);
-		
+		$data["meta_input"]["buttonclass"] = $buttoncss;
 		if($catName == "eLecture"){
 			$data["EventStartHour"] = date("H", $startTimestamp);
 			$data["EventStartMinute"] = date("i", $startTimestamp);
@@ -437,10 +459,11 @@ class PhOnlineEventImporter{
 					$content ='<img class="alignleft wp-image-354 size-full" src="http://onlinecampus-server.at/vphneu/wp-content/uploads/2016/03/logo_electures_RGB_500px.jpg" alt="Symbolbild für Veranstaltungskategorie eLectures" width="210" height="71" />
 						
 						<div class="buttonsright">
-						[button link="'.$data["meta_input"]["lvurl"].'" color="silver" newwindow="yes"]<img class="alignnone size-full wp-image-1960" src="http://onlinecampus-server.at/vphneu/wp-content/uploads/2016/03/zur-anmeldung.png" alt="Zur Anmeldung (PH Online)" width="263" height="50" />[/button]
+						<a style="margin-left: 15px;" href="'.$data["meta_input"]["lvurl"].'" target="_blank" class="phbutton '.$data["meta_input"]["buttonclass"].'">
+						Zur Anmeldung</a>
 
 						<div class="clearfix"></div>
-						<a style="margin-left: 15px;" href="'.$data["meta_input"]["course_room"].'" target="_blank"><img class="alignnone size-full wp-image-2059" src="http://onlinecampus-server.at/vphneu/wp-content/uploads/2016/03/zum-lernraum.png" alt="Zum virtuellen Lernraum" width="238" height="39" /></a>
+						<a style="margin-left: 15px; vertical-align:middle;" class="phbutton lernraum" href="'.$data["meta_input"]["course_room"].'" target="_blank">Zum virtuellen Lernraum</a>
 						</div>
 						<div class="clearfix"></div>
 						
@@ -457,8 +480,10 @@ class PhOnlineEventImporter{
 					$content ='<img class="alignleft wp-image-354 size-full" src="http://onlinecampus-server.at/vphneu/wp-content/uploads/2016/03/Logo_KOS_500px_RGB-transparent.png" alt="Symbolbild für Veranstaltungskategorie Online Seminar" width="210" height="71" />
 						
 						<div class="buttonsright">
-						[button link="'.$data["meta_input"]["lvurl"].'" color="silver" newwindow="yes"]<img class="alignnone size-full wp-image-1960" src="http://onlinecampus-server.at/vphneu/wp-content/uploads/2016/03/zur-anmeldung.png" alt="Zur Anmeldung (PH Online)" width="263" height="50" />[/button]
+						<a style="margin-left: 15px;" href="'.$data["meta_input"]["lvurl"].'" target="_blank" class="phbutton '.$data["meta_input"]["buttonclass"].'">
+						Zur Anmeldung</a>
 						</div>
+						<div class="clearfix"></div>
 						
 						
 						'.$post_content.'
@@ -473,8 +498,10 @@ class PhOnlineEventImporter{
 
 
 					$content ='<div class="buttonsright">
-						[button link="'.$data["meta_input"]["lvurl"].'" color="silver" newwindow="yes"]<img class="alignnone size-full wp-image-1960" src="http://onlinecampus-server.at/vphneu/wp-content/uploads/2016/03/zur-anmeldung.png" alt="Zur Anmeldung (PH Online)" width="263" height="50" />[/button]
+						<a style="margin-left: 15px;" href="'.$data["meta_input"]["lvurl"].'" target="_blank" class="phbutton '.$date["meta_input"]["buttonclass"].'">
+						Zur Anmeldung</a>
 						</div>
+						<div class="clearfix"></div>
 						
 						
 						'.$post_content.'
@@ -486,11 +513,22 @@ class PhOnlineEventImporter{
 
 
 		        break;
-		        
-		       default:
-		       
-		       	$content = $post_content;
-		       	break;
+                    default:
+                        	$content ='<div class="buttonsright">
+						<a style="margin-left: 15px;" href="'.$data["meta_input"]["lvurl"].'" target="_blank" class="phbutton '.$date["meta_input"]["buttonclass"].'">
+						Zur Anmeldung</a>
+						</div>
+						<div class="clearfix"></div>
+						
+						
+						'.$post_content.'
+						
+						
+						[tabs slidertype="top tabs"] [tabcontainer] [tabtext]Teilnahmekriterien & Info [/tabtext] [tabtext]Lernziele[/tabtext] [tabtext]Voraussetzungen[/tabtext] [/tabcontainer] [tabcontent] [tab]'.$admission.'[/tab] [tab]'.$learningObjectives.'[/tab] [tab] '.$recommendedPrerequisites.'[/tab] [/tabcontent] [/tabs]
+						
+						';
+                        break;
+		     
 		}
 		
 		return Encoding::toUTF8($content);
