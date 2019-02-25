@@ -36,35 +36,37 @@ require_once ("ph-online-token.php");
 
 class PhOnlineImportPlugin{
 
-  private static $instance;
-  private $url;
-  private $path;
-  private $basename;
+	private static $instance;
+	private $url;
+	private $path;
+	private $basename;
 	private $prefix;
 	private $importer;
 	private $deleter;
+	private $token;
 
-  public static function get_instance() {
-    if( null == self::$instance ) {
-      self::$instance = new PhOnlineImportPlugin();
-    }
+	public static function get_instance() {
+		if( null == self::$instance ) {
+			self::$instance = new PhOnlineImportPlugin();
+		}
 
-    return self::$instance;
-  }
+		return self::$instance;
+	}
 
-  private function __construct() {
+	private function __construct() {
 
 
 		$this->basename = plugin_basename( __FILE__ );
 		$this->url      = plugin_dir_url( __FILE__ );
 		$this->path     = plugin_dir_path( __FILE__ );
-		
+		$this->token = \PHOnlineToken\Token::GetToken();
+
 		$this->plugin_classes();
 		$this->init();
 		$this->hooks();
-       
-                
-  }
+		
+
+	}
 
 	public function plugin_classes() {
 		$this->importer = new PhOnlineEventImporterAustria();
@@ -73,11 +75,11 @@ class PhOnlineImportPlugin{
 
 	public function init() {
 	}
-	  
+
 	public function hooks() {
-  	add_action( 'init', array($this, 'init'));		
+		add_action( 'init', array($this, 'init'));		
 		add_action('cron_event', array($this, 'import_events'));
-	  if(current_user_can("import")){
+		if(current_user_can("import")){
 			add_action('parse_request', array($this, 'parse_request'));
 			add_filter('query_vars', array($this, 'query_vars'));
 			add_action( 'admin_menu', array($this, 'register_admin_page') );
@@ -86,8 +88,26 @@ class PhOnlineImportPlugin{
 	}
 
 	public static function activate() {
-		wp_schedule_event(strtotime('tomorrow 03:30'), 'daily', 'cron_event');
+	global $wpdb;
+    
+
+    $table_name = $wpdb->prefix . 'currentph';
+
+    $charset_collate = $wpdb->get_charset_collate();
+
+    $sql = "CREATE TABLE $table_name (
+    id mediumint(9) NOT NULL AUTO_INCREMENT,
+    date datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
+    currentph text NOT NULL,
+    PRIMARY KEY  (id)
+    ) $charset_collate;";
+	require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+    dbDelta( $sql );
+    
+			wp_schedule_event( time(), 'hourly', 'cron_event');
 		
+		
+
 		flush_rewrite_rules();
 	}
 
@@ -102,108 +122,133 @@ class PhOnlineImportPlugin{
 
 	
 	public function import_events() {
+		global $wpdb;
 		$this->set_last_import_time();
-		
-		echo "<pre>";
-		$this->importer->import();
-		echo "</pre>";
 
-		die();
+		$lastph = $wpdb->get_var("SELECT currentph from wp_currentph WHERE date = (SELECT MAX(date) from wp_currentph)");
+		$ph = $this->token[$lastph];
 
-	}
-	
-	private function delete_old_events() {
-		echo "<pre>";
-		$this->deleter->delete();
-		echo "</pre>";
+		$phnext = $ph["key"];
 
-		die();
+		$table_name = $wpdb->prefix . 'currentph';
 
-	}
-	
-	public function parse_request($wp) {
-	    if (array_key_exists('ph-online-import', $wp->query_vars) && $wp->query_vars['ph-online-import'] == 'true') {
+		$wpdb->insert( 
+		      $table_name, 
+		      array( 
+		        'date' => current_time( 'mysql' ), 
+		        'currentph' => $phnext, 
+		        ) 
+		      );
+ 
+			echo "<pre>";
+			$this->importer->import($phnext);
+			echo "</pre>";
+
+			die();
+
+		}
+
+		private function delete_old_events() {
+			echo "<pre>";
+			$this->deleter->delete();
+			echo "</pre>";
+
+			die();
+
+		}
+
+		public function parse_request($wp) {
+			if (array_key_exists('ph-online-import', $wp->query_vars) && $wp->query_vars['ph-online-import'] == 'true') {
 				$this->import_events();
-	    }
-	
-	    if (array_key_exists('ph-online-delete', $wp->query_vars) && $wp->query_vars['ph-online-delete'] == 'true') {
+			}
+
+			if (array_key_exists('ph-online-delete', $wp->query_vars) && $wp->query_vars['ph-online-delete'] == 'true') {
 				$this->delete_old_events();
-	    }
-  }
-    
-  public function query_vars($vars) {
-    $vars[] = 'ph-online-import';
-		$vars[] = 'ph-online-delete';
-    return $vars;
-	}
-	
-	public function register_admin_page(){
-		add_management_page( "Event Import Log", "Event Import Log", "manage_options", "ph-online-import-log", array($this, 'page'));
-		add_management_page( "Start Event Import", "Start Event Import", "manage_options", "ph-online-start-import", array($this, 'page_start'));
-	}
-	
-	public function get_last_import_time(){
-		
-		$time = get_option('ph_online_last_import');
-		
-		if($time !== false){
-			return intval($time);
+			}
+		}
+
+		public function query_vars($vars) {
+			$vars[] = 'ph-online-import';
+			$vars[] = 'ph-online-delete';
+			return $vars;
+		}
+
+		public function register_admin_page(){
+			add_management_page( "Event Import Log", "Event Import Log", "manage_options", "ph-online-import-log", array($this, 'page'));
+			add_management_page( "Start Event Import", "Start Event Import", "manage_options", "ph-online-start-import", array($this, 'page_start'));
+		}
+
+		public function get_last_import_time(){
+
+			$time = get_option('ph_online_last_import');
+
+			if($time !== false){
+				return intval($time);
+			}
+
+			return 0;	
+		}
+
+		public function set_last_import_time(){
+			return update_option('ph_online_last_import', time());	
 		}
 		
-		return 0;	
-	}
+		public function page(){
+			echo "<div class='wrap'>";
+			$cron_jobs = wp_next_scheduled( 'cron_event' );
 
-	public function set_last_import_time(){
-		return update_option('ph_online_last_import', time());	
-	}
-		
-	public function page(){
-		echo "<div class='wrap'>";
-		$cron_jobs = wp_next_scheduled( 'cron_event' );
-		
-		echo "<h1>Next scheduled Import</h1><pre>";
-		if($cron_jobs !== false){
-			echo date("c", $cron_jobs);
-		}else{
-			echo "No Import scheduled";
+			echo "<h1>Next scheduled Import</h1><pre>";
+			if($cron_jobs !== false){
+				echo date("c", $cron_jobs);
+			}else{
+				echo "No Import scheduled";
+			}
+			echo "</pre>";
+
+			echo"<h1>Log of last Import</h1><pre>";
+			echo $this->importer->getLog();
+			echo "</pre></div>";
 		}
-		echo "</pre>";
-		
-		echo"<h1>Log of last Import</h1><pre>";
-		echo $this->importer->getLog();
-		echo "</pre></div>";
-	}
 
-	public function page_start(){
-		echo "<div class='wrap'>";
-		
-		echo "<h1>Status</h1>";
-						
-		if($this->get_last_import_time() + 900 < time()){			
-			if(isset($_POST["ph_online_start_event_import"])){
-				
+
+		public function page_start(){
+			echo "<div class='wrap'>";
+ /*test*/
+			echo "<h1>Status</h1>";
+
+			if($this->get_last_import_time() + 1 < time()){			
+				if(isset($_POST["ph_online_start_event_import"])){
+
 				//Remove comment for debugging in the next line
-				$this->importer->import();
+					$ph = $_POST['PH'];
+					$this->importer->import($ph);
 				// Comment out next line for debugging
 		        //$this->schedule_import_now();		
-				echo "<pre>Event-Import wurde gestartet. Ergebnisse gibt es in ungefähr 15 Minuten auf dieser Seite: <a href='".home_url("/wp-admin/tools.php?page=ph-online-import-log")."'>Status-Ansicht</a></pre>";
-				
-			}else{			
-				echo '<form method="post" action="tools.php?page=ph-online-start-import">';
-			
-				echo submit_button("Import starten", "primary", "ph_online_start_event_import");
-			
-				echo '</form>';
-			}
-		}else{
-			echo "<pre>Import nur alle 15 Minuten moeglich.\nZur <a href='".home_url("/wp-admin/tools.php?page=ph-online-import-log")."'>Status-Ansicht</a></pre>";
-		}		
-		echo "</div>";
+					echo "<pre>Event-Import wurde gestartet. Ergebnisse gibt es in ungefähr 15 Minuten auf dieser Seite: <a href='".home_url("/wp-admin/tools.php?page=ph-online-import-log")."'>Status-Ansicht</a></pre>";
+
+				}else{			
+					echo '<div><h2>Ph wählen</h2></div>';
+					echo '<form method="post" action="tools.php?page=ph-online-start-import">';
+					echo ' <select name="PH">';
+					foreach (array_keys($this->token) as $ph){
+						echo	"<option value='".$ph."''>".$ph."</option>";
+					}
+
+					echo "</select>";
+
+					echo submit_button("Import starten", "primary", "ph_online_start_event_import");
+
+					echo '</form>';
+				}
+			}else{
+				echo "<pre>Import nur alle 15 Minuten moeglich.\nZur <a href='".home_url("/wp-admin/tools.php?page=ph-online-import-log")."'>Status-Ansicht</a></pre>";
+			}		
+			echo "</div>";
+		}
+
 	}
 
-}
+	register_activation_hook( __FILE__, array( "PhOnlineImportPlugin", 'activate' ) );
+	register_deactivation_hook( __FILE__, array( "PhOnlineImportPlugin", 'deactivate' ) );    
 
-register_activation_hook( __FILE__, array( "PhOnlineImportPlugin", 'activate' ) );
-register_deactivation_hook( __FILE__, array( "PhOnlineImportPlugin", 'deactivate' ) );    
-
-add_action( 'plugins_loaded', array( 'PhOnlineImportPlugin', 'get_instance' ) );
+	add_action( 'plugins_loaded', array( 'PhOnlineImportPlugin', 'get_instance' ) );
