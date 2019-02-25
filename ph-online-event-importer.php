@@ -48,7 +48,7 @@ class PhOnlineEventImporter{
 		$this->logLine("IMPORT START");
 		$this->logLine(date("c", current_time( 'timestamp' )));
 		
-		$fromtime = strtotime("today -100 days");
+		$fromtime = strtotime("today -1 days");
 		$untiltime = strtotime("today +1 year");
 		
 		$url = "https://www.ph-online.ac.at/ph-bgldj/ws/webservice_v1.0/xcal/organization/courses/xml?token=". $this->token ."&timeMode=absolute&orgUnitID=15304&fromDate=".date("Ymd", $fromtime)."&untilDate=".date("Ymd", $untiltime);		
@@ -199,6 +199,7 @@ class PhOnlineEventImporter{
 		$organizer = get_page_by_title($name, OBJECT, 'tribe_organizer');
 				
 		if($organizer == null){
+			$this->logLine("emptyorga");
 			$organizer_id = tribe_create_organizer(array("Organizer" => $name));
 			
 			$post = get_post($organizer_id);
@@ -207,7 +208,7 @@ class PhOnlineEventImporter{
 						
 		}else{
 			$organizer_id = $organizer->ID;
-		}
+			  }
 		
 		return $organizer_id;
 	}
@@ -268,20 +269,28 @@ class PhOnlineEventImporter{
 		}		
 
 		$post_content = str_replace($brackettmp, "", $post_content);
-		
+		$data["meta_input"]["summary"] = (string)$event->summary;
 		$cats = array_merge(array($cat), $extracat);
-				
+		//$organizer_id=-999;		
 		$organizer = array();
 		$organizer["OrganizerID"] = array();
-		
 		foreach($singleEvent->course->contacts->person as $person){
-			$givenName = (string)$person->name->given;
-			$familyName = (string)$person->name->family;
-		
-			$organizer_id = $this->get_organizer($givenName. " ".$familyName );
-			$organizer["OrganizerID"][] = $organizer_id;
-		}		
-													
+			    $group=(string)$person->infoBlock->subBlock->subBlock;
+			    $this->logLine("Gruppe: ".$group);
+			   // if(strpos($data["meta_input"]["summary"],$group)){
+				$givenName = (string)$person->name->given;
+				$familyName = (string)$person->name->family;
+				$this->logLine($givenName." test ".$familyName);
+				$organizer_id = $this->get_organizer($givenName. " ".$familyName );
+				$organizer["OrganizerID"][] = $organizer_id;
+			//	}
+			}		
+        if($organizer_id==-999&&$catName!="Online-Seminar"){
+			    $organizer_id = $this->get_organizer("Referent_In folgt");
+				$organizer["OrganizerID"][] = $organizer_id;
+        }
+		$this->logLine(($organizer_id));
+
 		$data["meta_input"]["importid"] = $this->importid;		
 		$data["post_status"] = "publish";
 		$data["post_title"] = (string)$singleEvent->course->courseName->text;
@@ -290,7 +299,7 @@ class PhOnlineEventImporter{
 		$data["meta_input"]["co_moderation"] = $data["CoMod"];
                 $data["meta_input"]["course_order"] = (string)$singleEvent->course->courseCode;
 		$data["meta_input"]["course_id"] = (string)$singleEvent->course->courseID;
-		$data["meta_input"]["summary"] = (string)$event->summary;
+		
 		$data["meta_input"]["lvurl"] = (string)$event->description["altrep"];
 		preg_match("/\/ph-(.*)\//iu", $data["meta_input"]["lvurl"], $buttonclass); 
 		switch ($buttonclass[0]) {
